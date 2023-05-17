@@ -1,0 +1,118 @@
+%% _____ performance of MF & correlators ________.
+clear all ;
+clc;
+%% _________definening signal parameters______________-
+%to get a total vector with 2e6.
+%represent 1 with s1(t) & zero with s2(t).
+n_bits = 1e5;
+generated_bits = randi([0 1],1,n_bits); %%random generated data
+snr = 0:2:30;
+%each wave form represnted by 20 samples
+m = 20 ;
+%sampling instance.
+n = 20 ;
+
+%% ________redifining m & n__________.
+prompt = {'Number of samples "m"','Sampling instant "n"'};
+dlgtitle = 'Input';
+dims = [1 35];
+definput = {'20','20'};
+answer = inputdlg(prompt,dlgtitle,dims,definput);
+m=str2double(answer{1});
+n=str2double(answer{2});
+%%--------calc power of transsimeted signal
+
+    power = sum(generated_bits.^2)/length(generated_bits);
+    disp(['The signal power is ' num2str(power) '.']);
+
+%% ____________define s1(t) & s2(t)_________________.
+%rect of amp 1 to represnt 1's and rect with amp 0 to represent 0's
+s1 = input('s1 = ');  %Wave represents each "1" bit
+s2 = input('s2 = ');  %Wave represents each "0" bit;
+
+%representing each waveform in m bits
+s1 = resample(s1,m,length(s1));
+s2 = resample(s2,m,length(s2));
+
+Total_n_samples = n_bits * m;
+x_axis = linspace(1,n_bits,Total_n_samples);
+
+%generated _waveform
+%replacing 1's with s1 and 0's with s2
+genetrated_waveform = zeros(1,Total_n_samples);
+for i = 1 : length(generated_bits)
+    if generated_bits(i)==0
+        genetrated_waveform(1+(m*(i-1)):m+(m*(i-1)))=s2;
+    else
+        genetrated_waveform(1+(m*(i-1)):m+(m*(i-1)))=s1;
+    end
+end
+
+%% _______ determining reciever type__________.
+MF = 0 ;
+correlator = 0;
+choice = questdlg(' choose reciever type ', 'reciever selector', 'correlator', 'MF','MF');
+switch choice
+    case 'MF'
+        disp('You chose Option MF reciever');
+        MF = 1 ;
+    case 'correlator'
+        disp('You chose Option correlator reciver');
+        correlator = 1 ;
+end
+%% MF
+if MF==1
+hmf = fliplr(s1)-fliplr(s2); %MF time domain representation
+%mf_op_sequence = {};
+%definening vth t = 20
+vth = (s1(m)+s2(m))/2 ;
+%%__adding noise to signal,performing convultion,estimanting o/p __.
+ber_matrix = zeros(1,length(snr));
+for i = 1 :length(snr)
+estimated_op = zeros(1,length(generated_bits));
+Rx_sequence=awgn(genetrated_waveform,snr(i),'measured');
+    mf_op_sequence = {};
+    for l = 1:length(generated_bits)
+        mf_op = conv(hmf,Rx_sequence(1+(m*(l-1)):m+(m*(l-1))));
+        mf_op_sequence{end+1}= mf_op;
+        %%comparing with vth
+        if mf_op_sequence{1,l}(m) >= vth
+            estimated_op(l) = 1;
+        end
+    end
+    error = biterr (generated_bits,estimated_op);   %error in bits.
+    ber_matrix(i)=(error)/(length(generated_bits)); %bit error rate.
+end
+
+%%ploting semilog
+semilogy(snr,ber_matrix,'b-x');
+end
+
+%% correlator
+
+if correlator ==1
+g = s1-s2; %correlator multiplier.
+%definening vth t = 20
+vth = (s1(m)+s2(m))/2 ;
+%%__adding noise to signal,performing convultion,estimanting o/p __.
+ber_matrix = zeros(1,length(snr));
+for i = 1 :length(snr)
+estimated_op = zeros(1,length(generated_bits));
+Rx_sequence=awgn(genetrated_waveform,snr(i),'measured');
+correlator_op_sequence = zeros(1,length(generated_bits));
+correlator_mlt = zeros (1,m);
+    for l = 1:length(generated_bits)
+        correlator_mlt= Rx_sequence(1+(m*(l-1)):m+(m*(l-1))).*g;
+        correlator_op_sequence(l)= sum(correlator_mlt);
+        %%comparing with vth
+        if  correlator_op_sequence(l)>= vth
+            estimated_op(l) = 1;
+        end
+    end
+    error = biterr (generated_bits,estimated_op);   %error in bits.
+    ber_matrix(i)=(error)/(length(generated_bits)) %bit error rate.
+end
+
+%%ploting semilog
+semilogy(snr,ber_matrix,'b-o');
+end

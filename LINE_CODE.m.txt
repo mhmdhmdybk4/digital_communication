@@ -1,0 +1,190 @@
+%Comparing the di?erent types of line codes used in digital communicatons
+%Line codes are also called digital baseband modulaton.
+%There are many di?erent types of line codes and each one of them has an advantage from a certain point of view
+%function Line_Codes
+%Generating Random Sequence of bits
+n_bits = 10;
+Rand_bits = randi([0,1],1,n_bits);
+N = 1;  %Period
+%% Type 1 : Non-Return To Zero (NRZ)
+    NRZ_WV = NRZ(Rand_bits, N,-1,1);
+    %Plotting
+    subplot(6,1,1); %Figure Division
+    stairs([NRZ_WV NRZ_WV(end-N+1:end)]); %Plotting with sharp Edges
+    title('Non-Return To Zero')
+    %axis padded ;
+    grid minor   ;%Setting Title & Style
+
+
+%% Type 2 : Non-Return To Zero Inverted (NRZI)
+    NRZI_WV = ones(1,length(Rand_bits)); %NRZI Wave Form
+    Temp = [1 Rand_bits];
+    for i = 1:length(Rand_bits)
+        Temp(i+1) = xor(Temp(i),Temp(i+1));
+    end
+    Temp(1) = [];
+    NRZI_WV = NRZ(Temp, N,-1,1);
+    %Plotting
+    subplot(6,1,2); %Figure Division
+    stairs([1 NRZI_WV NRZI_WV(end-N+1:end)]); %Plotting with sharp Edges
+    title('Non-Return To Zero Inverted'); grid minor;   %Setting Title & Style
+
+%% Type 3 : Return To Zero (RZ)
+    %RZ_WV = zeros(1,length(Rand_bits)); %RZ Wave Form
+    x_axis = linspace(1,N*n_bits+N,2*n_bits+N);
+    Wave_1 = [1,0]; %Wave represents each "1" bit
+    Wave_0 = [-1,0];  %Wave represents each "0" bit
+    RZ_WV = zeros(1,2*n_bits);
+    for i = 1 : length(Rand_bits)
+        if Rand_bits(i)==0
+            RZ_WV(1+(2*(i-1)):2+(2*(i-1)))=Wave_0;
+        else
+            RZ_WV(1+(2*(i-1)):2+(2*(i-1)))=Wave_1;
+        end
+    end
+    %Plotting
+    subplot(6,1,3); %Figure Division
+    stairs(x_axis,[RZ_WV RZ_WV(end-N+1:end)]); %Plotting with sharp Edges
+    title('Return To Zero'); grid minor;   %Setting Title & Style
+
+%% Type 4 : Alternative mark inversion (AMI)
+    %AMI is a synchronous clock encoding technique that uses bipolar pulses to
+    %represent logical 1. The next logic 1 is represented by a pulse of
+    %the opposite polarity.
+    N_ones = 0;
+    AMI_WV = zeros(1,length(Rand_bits));
+    for i = 1 : length(Rand_bits)
+        if ( (Rand_bits(i)==1) && (mod(N_ones,2)==0) )
+            N_ones = N_ones + 1;
+            AMI_WV(1+(N*(i-1)):N+(N*(i-1)))= 1*ones(1,N);  %Wave represents each "0" bit
+        elseif (Rand_bits(i)==1 && mod(N_ones,2)==1)
+            N_ones = N_ones + 1;
+            AMI_WV(1+(N*(i-1)):N+(N*(i-1)))= -1*ones(1,N);  %Wave represents each "0" bit
+        else
+            AMI_WV(1+(N*(i-1)):N+(N*(i-1)))= zeros(1,N);
+        end %if
+    end
+    %Plotting
+    subplot(6,1,4); %Figure Division
+    stairs([AMI_WV AMI_WV(end-N+1:end)]); %Plotting with sharp Edges
+    title('Alternative Mark Inversion'); grid minor;   %Setting Title & Style
+
+%% Type 5 : Manchester Coding (MCS)
+    x_axis = linspace(1,N*n_bits+N,2*n_bits+N);
+    Wave_1 = [1,-1]; %Wave represents each "1" bit
+    Wave_0 = [-1,1];  %Wave represents each "0" bit
+    MCS_WV = zeros(1,2*n_bits);
+    for i = 1 : length(Rand_bits)
+        if Rand_bits(i)==0
+            MCS_WV(1+(2*(i-1)):2+(2*(i-1)))=Wave_0;
+        else
+            MCS_WV(1+(2*(i-1)):2+(2*(i-1)))=Wave_1;
+        end
+    end
+    %Plotting
+    subplot(6,1,5); %Figure Division
+    stairs(x_axis,[MCS_WV MCS_WV(end-N+1:end)]); %Plotting with sharp Edges
+    title('Manchester Coding'); grid minor;   %Setting Title & Style
+
+%% Type 6 : Multi Level Transmission (MLT-3)
+    %MLT-3 cycles sequentially through the voltage levels ?1, 0, +1, 0. It
+    %moves to the next state to transmit a 1 bit, and stays in the same state
+    %to transmit a 0 bit
+    Wave_1 = ones(1,N);
+    MLT_3 = zeros(1,N*length(Rand_bits));
+    level = 1;
+    dir = -1;
+    for i = 1 : length(Rand_bits)
+        if Rand_bits(i)==1
+            if(level + dir >1 || level+dir <-1)
+                dir = -dir;
+                level = level +dir;
+            else
+                level = level +dir;
+            end
+        end
+        MLT_3(1+(N*(i-1)):N+(N*(i-1)))=level .* Wave_1;
+    end
+    %Plotting
+    subplot(6,1,6); %Figure Division
+    stairs([1 MLT_3 MLT_3(end-N+1:end)]); %Plotting with sharp Edges
+    title('Multi Level Transmission'); grid minor;   %Setting Title & Style
+
+%end
+
+%% PSD
+f=-1:.01:1;
+
+Tb=1; %period of pulse
+
+a=1; %pulse ampl
+
+%x1=(sinc(f*Tb)).^2;
+
+x2=(sinc(pi*f*Tb)).^2 *Tb*((a^2)/4);
+
+NRZ_Polar=(sinc(pi*f*Tb)).^2 *Tb*(a^2);
+
+z=(f==0);
+
+z1=((a^2)/4)*z;
+
+v=(sin(pi*f*Tb).^2);
+
+AMI=NRZ_Polar.*v;
+
+vm=(sinc(pi*f*Tb/2)).^2;
+
+vm1=(sin(pi*f*Tb/2).^2);
+
+Manchester=(a^2)*Tb*vm.*vm1;
+
+polar_RZ = ((a^2)*Tb/4)*sinc(pi*f*Tb/4).^2;
+
+
+nrzi = a^2 * Tb^2 .* (1 - cos(2*pi*f*Tb)) ./ (pi*f*Tb).^2;
+M = 1 ;
+PSD_MLT = (a^2./2).*(Tb^2).*(M^2).*(((sin(pi*f*Tb)/M)).^2)./(((pi*f*Tb)/M).^2);
+
+figure;
+plot(f,NRZ_Polar,'r',f,AMI,'b',f,Manchester,'c',f,polar_RZ,'k',f,nrzi,'g',f,PSD_MLT,'y');
+legend('NRZ_Polar','AMI','Manchester','polar_RZ','nrzi','PSD_MLT');
+
+figure;plot(f,NRZ_Polar);title('PSD of NRZ_Polar');
+figure;plot(f,AMI);title('PSD of AMI');
+figure;plot(f,Manchester);title('PSD of Manchester');
+figure;plot(f,polar_RZ);title('PSD of polar_RZ');
+figure;plot(f,nrzi);title('PSD of nrzi');
+figure;plot(f,PSD_MLT);title('PSD of PSD_MLT');
+
+figure;
+subplot(6,1,1);plot(f,NRZ_Polar);title('PSD of NRZ_Polar');
+subplot(6,1,2);plot(f,AMI);title('PSD of AMI');
+subplot(6,1,3);plot(f,Manchester);title('PSD of Manchester');
+subplot(6,1,4);plot(f,polar_RZ);title('PSD of polar_RZ');
+subplot(6,1,5);plot(f,nrzi);title('PSD of nrzi');
+subplot(6,1,6);plot(f,PSD_MLT);title('PSD of PSD_MLT');
+
+%2,6
+%2 Non-Return To Zero Inverted (NRZI) %
+%6 Multi Level Transmission (MLT-3)
+%3raek
+
+
+%Assisting Functions
+function NRZ_WV = NRZ(Rand_bits, N, w0, w1)
+    %Rand_bits : Sequence to be modulated
+    %N : number of Samples in one Period
+    Wave_1 = w1*ones(1,N); %Wave represents each "1" bit
+    Wave_0 = w0*ones(1,N);  %Wave represents each "0" bit
+    %Replacing Each bit with its equivalent wave
+    NRZ_WV = zeros(1,N*length(Rand_bits));  %Generated Waveform
+    
+    for i = 1 : length(Rand_bits)
+        if Rand_bits(i)==0
+            NRZ_WV(1+(N*(i-1)):N+(N*(i-1)))=Wave_0;
+        else
+            NRZ_WV(1+(N*(i-1)):N+(N*(i-1)))=Wave_1;
+        end
+    end
+end
